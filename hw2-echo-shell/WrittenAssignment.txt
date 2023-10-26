@@ -1,0 +1,79 @@
+1. PDU Structure:
+
+Class Information Protocol Layer (Lower Layer):
+* The Class Information Protocol PDU can be extended to contain more information on :
+    - Course ID, Section IDs, description, pre-requisites, availablity for term, academic year
+    - Instructor, schedule, available seats for each section
+
+ 0                   1                   2                   3
+ 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+| PROTO |  VER  |  CMD  |DIR|ATM|     AY: Academic Year         |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|             CC1: Course Code (First 4 Chars)                  |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|       CC2: Course Code (Last 3 Chars)         |LEN: Msg Length|
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|                     MSG: Message Data*                        |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|    SEC_ID: Section ID  | INST: Instructor  | SEATS: Available |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|      TERM: Availability for Terms  | PRE-REQ: Prerequisites   |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|                 SCHEDULE: Course Schedule*                |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+
+Course Registration Protocol Layer (Upper Layer):
+0                   1                   2                   3
+ 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+| PROTO |  VER  |  CMD  |DIR|ATM|     AY: Academic Year         |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|             CC1: Course Code (First 4 Chars)                  |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|       CC2: Course Code (Last 3 Chars)         |LEN: Msg Length|
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|                     MSG: Message Data*                        |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|      SECTION: Section ID (if applicable)    | STID: Student ID|
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|  OVERRIDE: Override Request Flag  | PREREQ: Prerequisite Info |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+
+2. Addresses 
+Student's local laptop : Client 
+Drexel's local machine : Server (Actively listening for requests)
+
+3. States
+State 1 : Client and Server established a stable socket connection, the connection stay open
+State 2 : Client construct a Course Registration PDU and send it to Server via socket
+State 3 : The server receives a request and now have the Course Registration PDU
+State 4 : The server process the Course Registration PDU (Details at section 4)
+State 5 : The server return a response to the client with a PDU that should include message included in state 4
+State 6 : The client receives server's response, process it
+State 7 : The client close the connection
+
+
+4. Managing Requests and Responses:
+
+Requests and responses can be managed as follows:
+
+* Course Registration Request:
+    - The client sends a Course Registration Request PDU to the server. This PDU includes the Course ID, Section ID, Student ID, Override Request, and Prerequisite fields.
+
+* The server processes the request:
+    - The server matches the received Coursed ID. If there is no such Course to be found, include a "Course not found" error in the response. Else, proceed.
+    - The server matches the received Section ID. If there is no such Section to be found, include a "Section not found" error in the response. Else, proceed.
+    - The server matches the received Student ID. If there is no such Student to be found, include a "Student not found" error in the response. Else, proceed.
+    - The server matches the received Prerequisites. If there is a mismatch Prerequisite , include a "Prerequisite missing" error along with the Prerequisite name in the response. Else, proceed
+    - The server check if there is a seat available for the section ID of the course ID, if there is make another process of taking the slot for the student and include a "Success" with a confirmation of section, schedule and student ID message in response
+    - If there are no seat left and if there is no override request, include a "No seat left" error in the response
+    - If there are no seat left and if there is an override request, make another process of waitlist and include a "Waitlisted" message in the response
+    - The server responds with a Course Registration Response PDU.
+    
+* Course Registration Response:
+    - Using the Course Registration Protocol PDU & Class Information Protocol PDU as the lower layer to construct a response with message of whether the registration was successful, the number of seats remaining, any override approvals, and missing requirements
+
+
+
+
